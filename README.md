@@ -22,7 +22,7 @@ here is one of many ways to setup your digsilent env in vscode.
 
 6. You must close your PF app first to run the code.
 
-7. On every scripts, these lines of code must be run first:
+7. On every script, these lines of code must be run first:
 
    import sys
 
