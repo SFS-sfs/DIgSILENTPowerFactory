@@ -1,4 +1,4 @@
-#Automate Distance Relay Settings
+#Automate Distance Relay Settings on line
 
 #NOTE: Only use this if your terminal is an ElmTerm element. Make sure the CT and PT devices are already made and configured in the same cubicle as the relay.
 #Cannot be used if your opposite terminal is a substation element. For substation use distance_relay_substat.py instead.
@@ -20,7 +20,7 @@ app.ActivateProject("YOUR PROJECT NAME")
 # ==========================================
 # 1. INIT COMPONENTS & CONNECTION
 # ==========================================
-line = app.GetCalcRelevantObjects("line_ext-trafo_1_150.ElmLne")[0]
+line = app.GetCalcRelevantObjects("YOUR LINE TARGET.ElmLne")[0]
 cubs = [line.GetAttribute(b) for b in ["bus1", "bus2"] if line.GetAttribute(b)]
 
 # Get local cubicle (Bus 5) and remote
