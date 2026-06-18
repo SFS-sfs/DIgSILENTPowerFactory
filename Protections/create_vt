@@ -1,0 +1,82 @@
+#create VT on line in DigSILENT PF
+
+import sys
+sys.path.append(r"C:\Program Files\DIgSILENT\PowerFactory 2021 SP2\Python\3.9")
+import powerfactory as pf
+
+app = pf.GetApplicationExt()
+if not app:
+    raise Exception("Connection to DIgSILENT Failed!")
+
+app.ActivateProject("Your Project")
+
+# ==========================================
+# 1. GET LINE & SELECT CUBICLE (TERMINAL i/j)
+# ==========================================
+lines = app.GetCalcRelevantObjects("Your Line Target.ElmLne")
+if not lines:
+    print("[ERROR] Line not found.")
+    sys.exit()
+
+line = lines[0]
+
+# --- TERMINAL SELECTOR SWITCH ---
+# Change to 'j' if you want to install PT/VT at the other end
+target_terminal = 'j' 
+
+# bus1 = Terminal i, bus2 = Terminal j
+cub = line.bus1 if target_terminal == 'i' else line.bus2
+
+if not cub:
+    print(f"[ERROR] Terminal {target_terminal} on {line.loc_name} is not perfectly connected.")
+    sys.exit()
+
+# Ensure the cubicle is attached to a busbar to read the nominal kV
+if not cub.cterm:
+    print(f"[ERROR] Cubicle at terminal {target_terminal} is not connected to a busbar.")
+    sys.exit()
+
+# ==========================================
+# 2. BUS VOLTAGE RATING (Change to Volts) & SECONDARY
+# ==========================================
+vt_pri_V = float(cub.cterm.uknom) * 1000.0
+vt_sec_V = 100.0
+
+# ==========================================
+# 3. FIND OR CREATE VT TYPE IN LIBRARY
+# ==========================================
+lib = app.GetProjectFolder("equip")
+vt_type = next((t for t in lib.GetContents("*.TypVt") 
+                if t.GetAttribute("primtaps") 
+                and vt_pri_V in [float(x) for x in t.GetAttribute("primtaps")]), None)
+
+if not vt_type:
+    vt_type = lib.CreateObject("TypVt", f"VT Type {vt_pri_V/1000}kV")
+    vt_type.SetAttribute("primtaps", [vt_pri_V])
+    print(f"[*] Creating new VT Type: VT Type {vt_pri_V/1000}kV")
+else:
+    print(f"[*] VT Type found in Library: {vt_type.loc_name}")
+
+# ==========================================
+# 4. FIND/CREATE VT OBJECT IN CUBICLE
+# ==========================================
+nama_bus = cub.cterm.loc_name
+vt_name = f"VT_{nama_bus}"
+
+vt_list = cub.GetContents("*.StaVt")
+if vt_list:
+    vt_obj = vt_list[0]
+    print(f"[*] Updating parameters for {vt_obj.loc_name} at {nama_bus} (Terminal {target_terminal})...")
+else:
+    vt_obj = cub.CreateObject("StaVt", vt_name)
+    print(f"[*] Creating new {vt_name} at {nama_bus} (Terminal {target_terminal})...")
+
+# ==========================================
+# 5. INPUT PARAMETERS
+# ==========================================
+vt_obj.typ_id = vt_type
+vt_obj.ptapset = vt_pri_V
+vt_obj.stapset = vt_sec_V
+
+app.WriteChangesToDb()
+print(f"\n[FINISHED] VT {vt_pri_V/1000}kV / {int(vt_sec_V)}V successfully set up at Terminal {target_terminal} ({line.loc_name})!")
